@@ -1,0 +1,16 @@
+{
+  "name": "uma8",
+  "version": "1.0.0",
+  "description": "Node module for reading data from a miniDSP UMA 8 array microphone",
+  "main": "index.js",
+  "scripts": {
+    "build": "node-gyp rebuild",
+    "build-debug": "node-gyp rebuild --debug"
+  },
+  "author": "Jan Erik Hanssen",
+  "license": "MIT",
+  "dependencies": {
+    "bindings": "^1.3.0",
+    "nan": "^2.8.0"
+  }
+}
