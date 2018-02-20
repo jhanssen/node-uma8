@@ -4,11 +4,13 @@
 #include <libusb.h>
 #include "utils.h"
 
-struct Input {
+struct Input : public Nan::ObjectWrap
+{
     Input();
     ~Input();
 
     bool open(uint8_t bus, uint8_t port);
+    v8::Local<v8::Object> makeObject();
 
     libusb_context* usb;
     libusb_device_handle* handle;
@@ -49,10 +51,6 @@ struct Input {
     static void irqCallback(libusb_transfer* xfr);
 };
 
-struct State {
-    std::unordered_set<Input*> inputs;
-};
-
 Input::Input()
     : stopped(false), opened(false), pendingCancels(-1)
 {
@@ -79,6 +77,17 @@ Input::~Input()
         }
         libusb_exit(usb);
     }
+}
+
+v8::Local<v8::Object> Input::makeObject()
+{
+    Nan::EscapableHandleScope scope;
+    v8::Local<v8::FunctionTemplate> tpl = Nan::New<v8::FunctionTemplate>();
+    tpl->InstanceTemplate()->SetInternalFieldCount(1);
+    v8::Local<v8::Function> ctor = Nan::GetFunction(tpl).ToLocalChecked();
+    v8::Local<v8::Object> obj = Nan::NewInstance(ctor, 0, nullptr).ToLocalChecked();
+    Wrap(obj);
+    return scope.Escape(obj);
 }
 
 bool Input::open(uint8_t bus, uint8_t port)
@@ -350,17 +359,14 @@ void Input::run(void* arg)
     }
 }
 
-static State state;
-
 NAN_METHOD(create) {
     Input* input = new Input;
-    state.inputs.insert(input);
-
-    info.GetReturnValue().Set(Nan::New<v8::External>(input));
+    //state.inputs.insert(input);
+    info.GetReturnValue().Set(input->makeObject());
 }
 
 NAN_METHOD(open) {
-    if (info.Length() < 1 || !info[0]->IsExternal()) {
+    if (info.Length() < 1 || !info[0]->IsObject()) {
         Nan::ThrowError("Need an external to open");
         return;
     }
@@ -391,29 +397,18 @@ NAN_METHOD(open) {
         return;
     }
 
-    Input* input = static_cast<Input*>(v8::Local<v8::External>::Cast(info[0])->Value());
+    Input* input = Input::Unwrap<Input>(v8::Local<v8::Object>::Cast(info[0]));
     if (!input->open(v8::Local<v8::Uint32>::Cast(busValue)->Value(), v8::Local<v8::Uint32>::Cast(portValue)->Value())) {
         return;
     }
 }
 
-NAN_METHOD(destroy) {
-    if (info.Length() < 1 || !info[0]->IsExternal()) {
-        Nan::ThrowError("Need an external to destroy");
-        return;
-    }
-    Input* input = static_cast<Input*>(v8::Local<v8::External>::Cast(info[0])->Value());
-    // remove from set and delete
-    state.inputs.erase(input);
-    delete input;
-}
-
 NAN_METHOD(enumerate) {
-    if (info.Length() < 1 || !info[0]->IsExternal()) {
+    if (info.Length() < 1 || !info[0]->IsObject()) {
         Nan::ThrowError("Need an external to open");
         return;
     }
-    Input* input = static_cast<Input*>(v8::Local<v8::External>::Cast(info[0])->Value());
+    Input* input = Input::Unwrap<Input>(v8::Local<v8::Object>::Cast(info[0]));
     libusb_device** list;
     ssize_t devices = libusb_get_device_list(input->usb, &list);
     if (devices < 0) {
@@ -446,7 +441,7 @@ NAN_METHOD(enumerate) {
 }
 
 NAN_METHOD(on) {
-    if (info.Length() < 1 || !info[0]->IsExternal()) {
+    if (info.Length() < 1 || !info[0]->IsObject()) {
         Nan::ThrowError("Need an external for on");
         return;
     }
@@ -458,7 +453,7 @@ NAN_METHOD(on) {
         Nan::ThrowError("Need a function for on");
         return;
     }
-    Input* input = static_cast<Input*>(v8::Local<v8::External>::Cast(info[0])->Value());
+    Input* input = Input::Unwrap<Input>(v8::Local<v8::Object>::Cast(info[0]));
     const std::string name = *Nan::Utf8String(info[1]);
     input->ons[name].push_back(std::make_shared<Nan::Callback>(v8::Local<v8::Function>::Cast(info[2])));
 }
@@ -466,7 +461,6 @@ NAN_METHOD(on) {
 NAN_MODULE_INIT(Initialize) {
     NAN_EXPORT(target, create);
     NAN_EXPORT(target, open);
-    NAN_EXPORT(target, destroy);
     NAN_EXPORT(target, enumerate);
     NAN_EXPORT(target, on);
 }
