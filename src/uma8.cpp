@@ -497,14 +497,19 @@ NAN_METHOD(removeListener) {
     Input* input = Input::Unwrap<Input>(v8::Local<v8::Object>::Cast(info[0]));
     const std::string name = *Nan::Utf8String(info[1]);
     Nan::Callback cur(v8::Local<v8::Function>::Cast(info[2]));
-    auto& listeners = input->ons[name];
-    auto listener = listeners.rbegin();
-    const auto end = listeners.rend();
+    auto listeners = input->ons.find(name);
+    if (listeners == input->ons.end()) {
+        info.GetReturnValue().Set(Nan::New<v8::Boolean>(false));
+        return;
+    }
+    auto& listenerList = listeners->second;
+    auto listener = listenerList.rbegin();
+    const auto end = listenerList.rend();
     while (listener != end) {
         if (*listener && **listener == cur) {
             // got it
-            listeners.erase(std::next(listener).base());
-            if (listeners.empty()) {
+            listenerList.erase(std::next(listener).base());
+            if (listenerList.empty()) {
                 input->ons.erase(name);
             }
             info.GetReturnValue().Set(Nan::New<v8::Boolean>(true));
