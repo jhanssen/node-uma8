@@ -117,6 +117,7 @@ bool Input::open(uint8_t bus, uint8_t port)
                 const int ret = libusb_open(dev, &handle);
                 if (ret != 0) {
                     // error
+                    libusb_free_device_list(list, 1);
                     Nan::ThrowError("Can't open");
                     return false;
                 }
