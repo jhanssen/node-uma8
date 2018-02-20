@@ -12,3 +12,19 @@ This module needs libusb-1.0 installed.
 
 #### OS X
 ```brew install libusb```
+
+## Example
+```javascript
+const Uma8 = require("uma8");
+
+const uma8 = new Uma8();
+uma8.on("audio", function(buffer) {
+  // buffer is a node Buffer
+});
+uma8.on("metadata", function(meta) {
+  // meta is an object with metadata, including vad and direction
+});
+const devices = uma8.enumerate();
+// pick one, devices is an array
+uma8.open(devices[0]);
+```
