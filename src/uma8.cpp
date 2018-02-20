@@ -498,22 +498,21 @@ NAN_METHOD(removeListener) {
     const std::string name = *Nan::Utf8String(info[1]);
     Nan::Callback cur(v8::Local<v8::Function>::Cast(info[2]));
     auto& listeners = input->ons[name];
-    auto listener = listeners.begin();
-    const auto end = listeners.end();
-    bool found = false;
+    auto listener = listeners.rbegin();
+    const auto end = listeners.rend();
     while (listener != end) {
         if (*listener && **listener == cur) {
             // got it
-            listener = listeners.erase(listener);
-            found = true;
-        } else {
-            ++listener;
+            listeners.erase(std::next(listener).base());
+            if (listeners.empty()) {
+                input->ons.erase(name);
+            }
+            info.GetReturnValue().Set(Nan::New<v8::Boolean>(true));
+            return;
         }
+        ++listener;
     }
-    if (listeners.empty()) {
-        input->ons.erase(name);
-    }
-    info.GetReturnValue().Set(Nan::New<v8::Boolean>(found));
+    info.GetReturnValue().Set(Nan::New<v8::Boolean>(false));
 }
 
 NAN_METHOD(removeAllListeners) {
