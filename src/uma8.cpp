@@ -1,6 +1,7 @@
 #include <nan.h>
 #include <unordered_set>
 #include <unordered_map>
+#include <string>
 #include <libusb.h>
 #include "utils.h"
 
@@ -19,6 +20,7 @@ struct Input : public Nan::ObjectWrap
     Mutex mutex;
     bool stopped, opened;
     int pendingCancels;
+    std::string error;
     struct Data {
         uint8_t* data;
         size_t size;
@@ -218,6 +220,11 @@ bool Input::open(uint8_t bus, uint8_t port)
                 }
                 input->metas.clear();
             }
+            if (!input->error.empty()) {
+                Nan::HandleScope scope;
+                Nan::ThrowError(Nan::New<v8::String>(input->error).ToLocalChecked());
+                input->error.clear();
+            }
         });
     uv_thread_create(&thread, Input::run, this);
     return true;
@@ -225,8 +232,8 @@ bool Input::open(uint8_t bus, uint8_t port)
 
 void Input::transferCallback(libusb_transfer* xfr)
 {
+    Input* input = static_cast<Input*>(xfr->user_data);
     if (xfr->status == LIBUSB_TRANSFER_CANCELLED) {
-        Input* input = static_cast<Input*>(xfr->user_data);
         --input->pendingCancels;
         libusb_free_transfer(xfr);
         return;
@@ -243,12 +250,16 @@ void Input::transferCallback(libusb_transfer* xfr)
         libusb_iso_packet_descriptor* pack = &xfr->iso_packet_desc[i];
         if (pack->status != LIBUSB_TRANSFER_COMPLETED) {
             // bad?
-            printf("xfr not completed\n");
+            MutexLocker locker(&input->mutex);
+            input->error = "incomplete iso xfr";
+            uv_async_send(&input->async);
             continue;
         }
         if (cur + Iso::PacketSize > end) {
             // this would be bad
-            printf("xfr buffer overflow\n");
+            MutexLocker locker(&input->mutex);
+            input->error = "overflow in iso xfr";
+            uv_async_send(&input->async);
             error = true;
             break;
         }
@@ -262,7 +273,6 @@ void Input::transferCallback(libusb_transfer* xfr)
         free(data);
     } else {
         // tell our async thingy
-        Input* input = static_cast<Input*>(xfr->user_data);
         MutexLocker locker(&input->mutex);
         input->datas.push_back(Input::Data{ data, bytes });
         uv_async_send(&input->async);
@@ -317,7 +327,10 @@ void Input::run(void* arg)
         input->iso.xfr[i] = libusb_alloc_transfer(Iso::NumPackets);
         if (!input->iso.xfr[i]) {
             // bad, handle me
-            printf("unable to allocate xfr\n");
+            MutexLocker locker(&input->mutex);
+            input->error = "Unable to allocate iso xfr";
+            uv_async_send(&input->async);
+            return;
         }
 
         libusb_fill_iso_transfer(input->iso.xfr[i], input->handle, Iso::EpIsoIn,
@@ -326,17 +339,27 @@ void Input::run(void* arg)
         libusb_set_iso_packet_lengths(input->iso.xfr[i], sizeof(input->iso.buf) / Iso::NumPackets);
         ret = libusb_submit_transfer(input->iso.xfr[i]);
         if (ret < 0) {
-            printf("error submitting iso %d %d\n", ret, errno);
+            MutexLocker locker(&input->mutex);
+            input->error = "Unable to submit iso xfr";
+            uv_async_send(&input->async);
         }
     }
     // allocate irq transfer
     input->irq.xfr = libusb_alloc_transfer(0);
+    if (!input->irq.xfr) {
+        MutexLocker locker(&input->mutex);
+        input->error = "Unable to allocate irq xfr";
+        uv_async_send(&input->async);
+        return;
+    }
     libusb_fill_interrupt_transfer(input->irq.xfr, input->handle, Irq::EpIn,
                                    input->irq.buf, sizeof(input->irq.buf),
                                    Input::irqCallback, input, 0);
     ret = libusb_submit_transfer(input->irq.xfr);
     if (ret < 0) {
-        printf("error submitting irq %d %d\n", ret, errno);
+        MutexLocker locker(&input->mutex);
+        input->error = "Unable to submit irq xfr";
+        uv_async_send(&input->async);
     }
 
     // 1 second
