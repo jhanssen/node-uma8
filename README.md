@@ -1,5 +1,5 @@
 # node-uma8
-Node module for reading data from a miniDSP UMA 8 array microphone
+Node module for reading data from a miniDSP UMA-8 array microphone
 
 ## Installation
 ```npm install --save uma8```
