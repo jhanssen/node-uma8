@@ -151,7 +151,6 @@ bool Input::open(uint8_t bus, uint8_t port)
         if (ret < 0) {
             // also bad
             libusb_close(handle);
-            printf("%d\n", ret);
             Nan::ThrowError("Can't claim interface");
             return false;
         }
