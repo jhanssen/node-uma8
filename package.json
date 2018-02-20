@@ -7,8 +7,13 @@
     "build": "node-gyp rebuild",
     "build-debug": "node-gyp rebuild --debug"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jhanssen/node-uma8.git"
+  },
   "author": "Jan Erik Hanssen",
   "license": "MIT",
+  "homepage": "https://github.com/jhanssen/node-uma8#readme",
   "dependencies": {
     "bindings": "^1.3.0",
     "nan": "^2.8.0"
