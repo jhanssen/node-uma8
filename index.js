@@ -20,11 +20,11 @@ class Uma8 {
     }
 
     removeListener(name, cb) {
-        internal.removeListener(this._uma8, name, cb);
+        return internal.removeListener(this._uma8, name, cb);
     }
 
     removeAllListeners(name) {
-        internal.removeAllListeners(this._uma8, name);
+        return internal.removeAllListeners(this._uma8, name);
     }
 }
 

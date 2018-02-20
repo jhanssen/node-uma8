@@ -527,8 +527,13 @@ NAN_METHOD(removeAllListeners) {
     }
     Input* input = Input::Unwrap<Input>(v8::Local<v8::Object>::Cast(info[0]));
     const std::string name = *Nan::Utf8String(info[1]);
-    input->ons[name].clear();
-    input->ons.erase(name);
+    auto listeners = input->ons.find(name);
+    if (listeners != input->ons.end()) {
+        input->ons.erase(listeners);
+        info.GetReturnValue().Set(Nan::New<v8::Boolean>(true));
+    } else {
+        info.GetReturnValue().Set(Nan::New<v8::Boolean>(false));
+    }
 }
 
 NAN_MODULE_INIT(Initialize) {
