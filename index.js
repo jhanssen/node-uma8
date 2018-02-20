@@ -2,8 +2,7 @@
 
 const internal = require('bindings')('uma8.node');
 
-class Uma8
-{
+class Uma8 {
     constructor() {
         this._uma8 = internal.create();
     }
@@ -18,6 +17,10 @@ class Uma8
 
     on(name, cb) {
         internal.on(this._uma8, name, cb);
+    }
+
+    removeAllListeners(name) {
+        internal.removeAllListeners(this._uma8, name);
     }
 }
 

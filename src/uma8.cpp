@@ -481,11 +481,26 @@ NAN_METHOD(on) {
     input->ons[name].push_back(std::make_shared<Nan::Callback>(v8::Local<v8::Function>::Cast(info[2])));
 }
 
+NAN_METHOD(removeAllListeners) {
+    if (info.Length() < 1 || !info[0]->IsObject()) {
+        Nan::ThrowError("Need an external for on");
+        return;
+    }
+    if (info.Length() < 2 || !info[1]->IsString()) {
+        Nan::ThrowError("Need a string for on");
+        return;
+    }
+    Input* input = Input::Unwrap<Input>(v8::Local<v8::Object>::Cast(info[0]));
+    const std::string name = *Nan::Utf8String(info[1]);
+    input->ons[name].clear();
+}
+
 NAN_MODULE_INIT(Initialize) {
     NAN_EXPORT(target, create);
     NAN_EXPORT(target, open);
     NAN_EXPORT(target, enumerate);
     NAN_EXPORT(target, on);
+    NAN_EXPORT(target, removeAllListeners);
 }
 
 NODE_MODULE(uma8, Initialize)
