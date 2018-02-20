@@ -19,6 +19,10 @@ class Uma8 {
         internal.on(this._uma8, name, cb);
     }
 
+    removeListener(name, cb) {
+        internal.removeListener(this._uma8, name, cb);
+    }
+
     removeAllListeners(name) {
         internal.removeAllListeners(this._uma8, name);
     }
