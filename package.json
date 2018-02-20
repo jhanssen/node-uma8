@@ -1,6 +1,6 @@
 {
   "name": "uma8",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Node module for reading data from a miniDSP UMA 8 array microphone",
   "main": "index.js",
   "scripts": {
