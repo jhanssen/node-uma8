@@ -428,7 +428,7 @@ NAN_METHOD(open) {
 
 NAN_METHOD(enumerate) {
     if (info.Length() < 1 || !info[0]->IsObject()) {
-        Nan::ThrowError("Need an external to open");
+        Nan::ThrowError("Need an external to enumerate");
         return;
     }
     Input* input = Input::Unwrap<Input>(v8::Local<v8::Object>::Cast(info[0]));
@@ -483,25 +483,26 @@ NAN_METHOD(on) {
 
 NAN_METHOD(removeListener) {
     if (info.Length() < 1 || !info[0]->IsObject()) {
-        Nan::ThrowError("Need an external for on");
+        Nan::ThrowError("Need an external for removeListener");
         return;
     }
     if (info.Length() < 2 || !info[1]->IsString()) {
-        Nan::ThrowError("Need a string for on");
+        Nan::ThrowError("Need a string for removeListener");
         return;
     }
     if (info.Length() < 3 || !info[2]->IsFunction()) {
-        Nan::ThrowError("Need a function for on");
+        Nan::ThrowError("Need a function for removeListener");
         return;
     }
     Input* input = Input::Unwrap<Input>(v8::Local<v8::Object>::Cast(info[0]));
     const std::string name = *Nan::Utf8String(info[1]);
-    Nan::Callback cur(v8::Local<v8::Function>::Cast(info[2]));
     auto listeners = input->ons.find(name);
     if (listeners == input->ons.end()) {
         info.GetReturnValue().Set(Nan::New<v8::Boolean>(false));
         return;
     }
+
+    Nan::Callback cur(v8::Local<v8::Function>::Cast(info[2]));
     auto& listenerList = listeners->second;
     auto listener = listenerList.rbegin();
     const auto end = listenerList.rend();
@@ -522,11 +523,11 @@ NAN_METHOD(removeListener) {
 
 NAN_METHOD(removeAllListeners) {
     if (info.Length() < 1 || !info[0]->IsObject()) {
-        Nan::ThrowError("Need an external for on");
+        Nan::ThrowError("Need an external for removeAllListeners");
         return;
     }
     if (info.Length() < 2 || !info[1]->IsString()) {
-        Nan::ThrowError("Need a string for on");
+        Nan::ThrowError("Need a string for removeAllListeners");
         return;
     }
     Input* input = Input::Unwrap<Input>(v8::Local<v8::Object>::Cast(info[0]));
