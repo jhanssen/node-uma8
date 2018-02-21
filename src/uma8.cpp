@@ -10,6 +10,8 @@ struct Input : public Nan::ObjectWrap
     Input();
     ~Input();
 
+    bool isValid() const { return usb != nullptr; }
+
     bool open(uint8_t bus, uint8_t port);
     v8::Local<v8::Object> makeObject();
 
@@ -384,7 +386,11 @@ void Input::run(void* arg)
 
 NAN_METHOD(create) {
     Input* input = new Input;
-    //state.inputs.insert(input);
+    if (!input->isValid()) {
+        Nan::ThrowError("Unable to initialize libusb");
+        delete input;
+        return;
+    }
     info.GetReturnValue().Set(input->makeObject());
 }
 
