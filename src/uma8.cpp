@@ -116,7 +116,7 @@ bool Input::open(uint8_t bus, uint8_t port)
             const uint8_t p = libusb_get_port_number(dev);
             if (b == bus && p == port) {
                 // got it
-                const int ret = libusb_open(dev, &handle);
+                ret = libusb_open(dev, &handle);
                 if (ret != 0) {
                     // error
                     libusb_free_device_list(list, 1);
@@ -304,7 +304,7 @@ void Input::irqCallback(libusb_transfer* xfr)
             // byte 5 is low byte of angle
             // byte 6 is direction
             const uint8_t vad = xfr->buffer[2];
-            const uint16_t angle = (static_cast<uint16_t>(xfr->buffer[4]) << 8) | xfr->buffer[3];
+            const uint16_t angle = (static_cast<uint16_t>(xfr->buffer[3]) << 8) | xfr->buffer[4];
             const uint8_t direction = xfr->buffer[5];
 
             MutexLocker locker(&input->mutex);
