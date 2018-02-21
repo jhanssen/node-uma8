@@ -236,6 +236,8 @@ bool Input::open(uint8_t bus, uint8_t port)
 
 void Input::transferCallback(libusb_transfer* xfr)
 {
+    // this appears to return s32l 24khz 2ch audio even though the device spec says 24bit 16khz 2ch
+
     Input* input = static_cast<Input*>(xfr->user_data);
     if (xfr->status == LIBUSB_TRANSFER_CANCELLED) {
         --input->pendingCancels;
