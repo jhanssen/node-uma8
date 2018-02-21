@@ -36,7 +36,7 @@ struct Input : public Nan::ObjectWrap
     std::unordered_map<std::string, std::vector<std::shared_ptr<Nan::Callback> > > ons;
 
     struct Iso {
-        enum { NumTransfer = 10, NumPackets = 10, PacketSize = 24, EpIsoIn = 0x81 };
+        enum { NumTransfer = 10, NumPackets = 100, PacketSize = 24, EpIsoIn = 0x81 };
 
         struct Transfer {
             uint8_t buf[PacketSize * NumPackets];
