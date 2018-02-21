@@ -38,8 +38,10 @@ struct Input : public Nan::ObjectWrap
     struct Iso {
         enum { NumTransfer = 10, NumPackets = 10, PacketSize = 24, EpIsoIn = 0x81 };
 
-        uint8_t buf[PacketSize * NumPackets];
-        libusb_transfer* xfr[NumTransfer];
+        struct Transfer {
+            uint8_t buf[PacketSize * NumPackets];
+            libusb_transfer* xfr;
+        } transfers[NumTransfer];
     } iso;
     struct Irq {
         enum { EpIn = 0x82 };
@@ -326,8 +328,8 @@ void Input::run(void* arg)
     // allocate isochronous data transfers
     int ret;
     for (int i = 0; i < Iso::NumTransfer; ++i) {
-        input->iso.xfr[i] = libusb_alloc_transfer(Iso::NumPackets);
-        if (!input->iso.xfr[i]) {
+        input->iso.transfers[i].xfr = libusb_alloc_transfer(Iso::NumPackets);
+        if (!input->iso.transfers[i].xfr) {
             // bad, handle me
             MutexLocker locker(&input->mutex);
             input->error = "Unable to allocate iso xfr";
@@ -335,11 +337,11 @@ void Input::run(void* arg)
             return;
         }
 
-        libusb_fill_iso_transfer(input->iso.xfr[i], input->handle, Iso::EpIsoIn,
-                                 input->iso.buf, sizeof(input->iso.buf), Iso::NumPackets,
+        libusb_fill_iso_transfer(input->iso.transfers[i].xfr, input->handle, Iso::EpIsoIn,
+                                 input->iso.transfers[i].buf, sizeof(input->iso.transfers[i].buf), Iso::NumPackets,
                                  Input::transferCallback, input, 1000);
-        libusb_set_iso_packet_lengths(input->iso.xfr[i], sizeof(input->iso.buf) / Iso::NumPackets);
-        ret = libusb_submit_transfer(input->iso.xfr[i]);
+        libusb_set_iso_packet_lengths(input->iso.transfers[i].xfr, Iso::PacketSize);
+        ret = libusb_submit_transfer(input->iso.transfers[i].xfr);
         if (ret < 0) {
             MutexLocker locker(&input->mutex);
             input->error = "Unable to submit iso xfr";
@@ -375,7 +377,7 @@ void Input::run(void* arg)
                 input->pendingCancels = 1 + Iso::NumTransfer;
                 libusb_cancel_transfer(input->irq.xfr);
                 for (int i = 0; i < Iso::NumTransfer; ++i) {
-                    libusb_cancel_transfer(input->iso.xfr[i]);
+                    libusb_cancel_transfer(input->iso.transfers[i].xfr);
                 }
             }
             if (!input->pendingCancels)
