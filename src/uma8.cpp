@@ -127,6 +127,7 @@ bool Input::open(uint8_t bus, uint8_t port)
                     Nan::ThrowError("Can't open");
                     return false;
                 }
+                break;
             }
         }
     }
